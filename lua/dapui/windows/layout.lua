@@ -179,11 +179,14 @@ function WindowLayout:_init_win_settings(win)
     winfixheight = true,
     wrap = false,
     signcolumn = "auto",
+    spell = false,
   }
   for key, val in pairs(win_settings) do
     api.nvim_win_set_option(win, key, val)
   end
-  vim.fn.setwinvar(win, "&winhl", "Normal:DapUINormal,EndOfBuffer:DapUIEndOfBuffer")
+  api.nvim_win_call(win, function()
+    vim.opt.winhighlight:append({ Normal = "DapUINormal", EndOfBuffer = "DapUIEndOfBuffer" })
+  end)
 end
 
 function WindowLayout:new(layout)
