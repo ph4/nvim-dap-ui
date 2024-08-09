@@ -31,7 +31,7 @@ local dapui = {}
 ---@field size number Size of the layout in lines/columns
 ---@field position "left"|"right"|"top"|"bottom" Which side of editor to open
 --- layout on
----
+
 ---@class dapui.Config.layout.element
 ---@field id string Element ID
 ---@field size number Size of the element in lines/columns or as proportion of
@@ -67,6 +67,8 @@ local dapui = {}
 --- name to fill before trimming
 ---@field max_value_lines? integer Maximum number of lines to allow a value to
 --- fill before trimming
+---@field sort_variables? fun(a: dapui.types.Variable, b: dapui.types.Variable):boolean Sorting function to determine
+--- render order of variables.
 
 ---@alias dapui.Action "expand"|"open"|"remove"|"edit"|"repl"|"toggle"
 

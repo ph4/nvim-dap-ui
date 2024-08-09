@@ -9,12 +9,13 @@ good out of the box configuration.
 
 ## Installation
 
-Install with your favourite package manager alongside nvim-dap
+Install with your favourite package manager alongside nvim-dap and nvim-nio
 
 [**dein**](https://github.com/Shougo/dein.vim):
 
 ```vim
 call dein#add("mfussenegger/nvim-dap")
+call dein#add("nvim-neotest/nvim-nio")
 call dein#add("rcarriga/nvim-dap-ui")
 ```
 
@@ -22,13 +23,20 @@ call dein#add("rcarriga/nvim-dap-ui")
 
 ```vim
 Plug 'mfussenegger/nvim-dap'
+Plug 'nvim-neotest/nvim-nio'
 Plug 'rcarriga/nvim-dap-ui'
 ```
 
 [**packer.nvim**](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-use { "rcarriga/nvim-dap-ui", requires = {"mfussenegger/nvim-dap"} }
+use { "rcarriga/nvim-dap-ui", requires = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} }
+```
+
+[**lazy.nvim**](https://github.com/folke/lazy.nvim)
+
+```lua
+{ "rcarriga/nvim-dap-ui", dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} }
 ```
 
 It is highly recommended to use [neodev.nvim](https://github.com/folke/neodev.nvim) to enable type checking for nvim-dap-ui to get
@@ -162,13 +170,16 @@ You can use nvim-dap events to open and close the windows automatically (`:help 
 
 ```lua
 local dap, dapui = require("dap"), require("dapui")
-dap.listeners.after.event_initialized["dapui_config"] = function()
+dap.listeners.before.attach.dapui_config = function()
   dapui.open()
 end
-dap.listeners.before.event_terminated["dapui_config"] = function()
+dap.listeners.before.launch.dapui_config = function()
+  dapui.open()
+end
+dap.listeners.before.event_terminated.dapui_config = function()
   dapui.close()
 end
-dap.listeners.before.event_exited["dapui_config"] = function()
+dap.listeners.before.event_exited.dapui_config = function()
   dapui.close()
 end
 ```

@@ -4,7 +4,7 @@ local config = require("dapui.config")
 
 local Float = { win_id = nil, listeners = { close = {} }, position = {} }
 
-local function create_opts(content_width, content_height, position)
+local function create_opts(content_width, content_height, position, title)
   local line_no = position.line
   local col_no = position.col
 
@@ -35,6 +35,8 @@ local function create_opts(content_width, content_height, position)
     height = height,
     style = "minimal",
     border = border,
+    title = title,
+    title_pos = title and "center",
   }
 end
 
@@ -90,16 +92,17 @@ end
 --   Optional:
 --     buffer
 --     position
+--     title
 function M.open_float(settings)
   local line_no = vim.fn.screenrow()
   local col_no = vim.fn.screencol()
   local position = settings.position or { line = line_no, col = col_no }
-  local opts = create_opts(settings.width, settings.height, position)
+  local opts = create_opts(settings.width, settings.height, position, settings.title)
   local content_buffer = settings.buffer or api.nvim_create_buf(false, true)
   local content_window = api.nvim_open_win(content_buffer, false, opts)
 
   local output_win_id = api.nvim_win_get_number(content_window)
-  vim.fn.setwinvar(output_win_id, "&winhl", "Normal:DapUINormalFloat,FloatBorder:DapUIFloatBorder")
+  vim.fn.setwinvar(output_win_id, "&winhl", "Normal:DapUIFloatNormal,FloatBorder:DapUIFloatBorder")
   vim.api.nvim_win_set_option(content_window, "wrap", false)
 
   return Float:new(content_window, position)
