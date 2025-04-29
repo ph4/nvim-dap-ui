@@ -25,7 +25,7 @@ return function(client)
     filetype = "dapui_disassembly",
   })()
 
-  if vim.treesitter.language.get_lang("disassembly") ~= nil then
+  if vim.treesitter.language.add("disassembly") ~= nil then
     vim.treesitter.start(buffer, "disassembly")
   end
 
