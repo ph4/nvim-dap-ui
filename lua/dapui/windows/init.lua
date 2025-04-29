@@ -1,6 +1,6 @@
 local M = {}
 
-local async = require("dapui.async")
+local nio = require("nio")
 local api = vim.api
 local util = require("dapui.util")
 local config = require("dapui.config")
@@ -123,18 +123,16 @@ function M.open_float(name, element, position, settings)
     float_windows[name]:jump_to()
     return float_windows[name]
   end
-  if settings.position == "center" then
-    local screen_w = vim.opt.columns:get()
-    local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
-    position.line = (screen_h - settings.height) / 2
-    position.col = (screen_w - settings.width) / 2
-  end
   local buf = element.buffer()
+  if type(settings) == "function" then
+    settings = settings()
+  end
   local float_win = require("dapui.windows.float").open_float({
     height = settings.height or 1,
     width = settings.width or 1,
     position = position,
     buffer = buf,
+    title = settings.title,
   })
 
   local resize = function()
@@ -142,7 +140,7 @@ function M.open_float(name, element, position, settings)
     local height = settings.height
 
     if not width or not height then
-      local lines = async.api.nvim_buf_get_lines(buf, 0, -1, false)
+      local lines = nio.api.nvim_buf_get_lines(buf, 0, -1, false)
       if not width then
         width = 0
         for _, line in ipairs(lines) do
@@ -155,13 +153,20 @@ function M.open_float(name, element, position, settings)
       end
     end
 
+    if settings.position == "center" then
+      local screen_w = vim.opt.columns:get()
+      local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
+      position.line = (screen_h - height) / 2
+      position.col = (screen_w - width) / 2
+    end
+
     if width <= 0 or height <= 0 then
       return
     end
-    float_win:resize(width, height)
+    float_win:resize(width, height, position)
   end
 
-  async.api.nvim_buf_attach(buf, true, {
+  nio.api.nvim_buf_attach(buf, true, {
     on_lines = function()
       if not vim.api.nvim_win_is_valid(float_win.win_id) then
         return true
@@ -169,7 +174,6 @@ function M.open_float(name, element, position, settings)
       resize()
     end,
   })
-  element.render()
   -- In case render doesn't trigger on_lines
   resize()
 

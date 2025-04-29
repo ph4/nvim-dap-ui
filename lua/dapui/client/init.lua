@@ -1,6 +1,5 @@
-local logger = require("dapui.logging")
 local dap = require("dap")
-local async = require("dapui.async")
+local nio = require("nio")
 local util = require("dapui.util")
 local types = require("dapui.client.types")
 
@@ -19,6 +18,7 @@ local DAPUIClient = {}
 ---@field _frame_set fun(frame: dapui.types.StackFrame)
 ---@field stopped_thread_id integer
 ---@field capabilities dapui.types.Capabilities
+---@field threads table<integer, dapui.types.Thread>
 
 local proxied_session_keys = {}
 for _, key in ipairs({
@@ -26,6 +26,7 @@ for _, key in ipairs({
   "_frame_set",
   "stopped_thread_id",
   "capabilities",
+  "threads",
 }) do
   proxied_session_keys[key] = true
 end
@@ -109,7 +110,7 @@ end
 local function create_client(session_factory, breakpoints)
   breakpoints = breakpoints or require("dap.breakpoints")
   local request_seqs = {}
-  local async_request = async.wrap(function(command, args, cb)
+  local async_request = nio.wrap(function(command, args, cb)
     local session = session_factory()
     request_seqs[session] = request_seqs[session] or {}
     request_seqs[session][session.seq] = true
@@ -125,7 +126,6 @@ local function create_client(session_factory, breakpoints)
         local start = vim.loop.now()
         local err, body = async_request(command, args)
         local diff = vim.loop.now() - start
-        logger.debug("Command", command, "took", diff / 1000, "seconds")
         if err then
           error(Error(err, { command = command, args = args }))
         elseif body.error then

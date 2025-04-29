@@ -1,15 +1,24 @@
 local config = require("dapui.config")
-local async = require("dapui.async")
+local nio = require("nio")
 
 local M = {}
 
-local api = async.api
+local api = nio.api
+
+local render_tasks = {}
+
+function M.stop_render_tasks()
+  for _, task in ipairs(render_tasks) do
+    task.cancel()
+  end
+  render_tasks = {}
+end
 
 ---@return function
 function M.create_render_loop(render)
-  local render_event = async.control.event()
+  local render_event = nio.control.event()
 
-  async.run(function()
+  render_tasks[#render_tasks + 1] = nio.run(function()
     while true do
       render_event.wait()
       render_event.clear()
@@ -17,7 +26,7 @@ function M.create_render_loop(render)
         local traceback = debug.traceback(msg, 1)
         M.notify(("Rendering failed: %s"):format(traceback), vim.log.levels.WARN)
       end)
-      async.sleep(10)
+      nio.sleep(10)
     end
   end)
 
@@ -27,32 +36,32 @@ function M.create_render_loop(render)
 end
 
 function M.get_current_expr()
-  if async.fn.mode() == "v" then
-    local start = async.fn.getpos("v")
-    local finish = async.fn.getpos(".")
+  if nio.fn.mode() == "v" then
+    local start = nio.fn.getpos("v")
+    local finish = nio.fn.getpos(".")
     local lines = M.get_selection(start, finish)
     return table.concat(lines, "\n")
   end
-  return async.fn.expand("<cexpr>")
+  return nio.fn.expand("<cexpr>")
 end
 
 function M.create_buffer(name, options)
   local buf
   return function()
     if not buf then
-      buf = name ~= "" and async.fn.bufnr(name) or -1
+      buf = name ~= "" and nio.fn.bufnr(name) or -1
     end
-    if async.api.nvim_buf_is_valid(buf) then
+    if nio.api.nvim_buf_is_valid(buf) then
       return buf
     end
-    buf = async.api.nvim_create_buf(true, true)
+    buf = nio.api.nvim_create_buf(true, true)
     options = vim.tbl_extend("keep", options or {}, {
       modifiable = false,
       buflisted = false,
     })
-    async.api.nvim_buf_set_name(buf, name)
+    nio.api.nvim_buf_set_name(buf, name)
     for opt, value in pairs(options) do
-      async.api.nvim_buf_set_option(buf, opt, value)
+      nio.api.nvim_buf_set_option(buf, opt, value)
     end
     return buf
   end
@@ -194,12 +203,24 @@ function M.get_selection(start, finish)
   return lines
 end
 
-function M.apply_mapping(mappings, func, buffer)
+function M.apply_mapping(mappings, func, buffer, label)
   for _, key in pairs(mappings) do
     if type(func) ~= "string" then
-      vim.api.nvim_buf_set_keymap(buffer, "n", key, "", { noremap = true, callback = func })
+      vim.api.nvim_buf_set_keymap(
+        buffer,
+        "n",
+        key,
+        "",
+        { noremap = true, callback = func, nowait = true, desc = label }
+      )
     else
-      vim.api.nvim_buf_set_keymap(buffer, "n", key, func, { noremap = true })
+      vim.api.nvim_buf_set_keymap(
+        buffer,
+        "n",
+        key,
+        func,
+        { noremap = true, nowait = true, desc = label }
+      )
     end
   end
 end
@@ -234,7 +255,7 @@ function M.partial(func, ...)
 end
 
 function M.send_to_repl(expression)
-  local repl_win = vim.fn.bufwinid("\\[dap-repl\\]")
+  local repl_win = vim.fn.bufwinid("\\[dap-repl") -- incomplete bracket to allow e.g. '[dap-repl-2]'
   if repl_win == -1 then
     M.float_element("repl")
     repl_win = vim.fn.bufwinid("\\[dap-repl\\]")
@@ -248,7 +269,8 @@ function M.float_element(elem_name)
   local col_no = vim.fn.screencol()
   local position = { line = line_no, col = col_no }
   local elem = require("dapui.elements." .. elem_name)
-  return require("dapui.windows").open_float(elem, position, elem.float_defaults or {})
+  if type(elem) == "function" then elem = elem() end
+  return require("dapui.windows").open_float(elem_name, elem, position, elem.settings or {})
 end
 
 function M.render_type(maybe_type)
@@ -297,6 +319,11 @@ function M.format_value(value_start, value)
     formatted[i] = line
   end
   return formatted
+end
+
+function M.tbl_flatten(t)
+  return vim.fn.has("nvim-0.10") == 1 and vim.iter(t):flatten(math.huge):totable()
+    or vim.tbl_flatten(t)
 end
 
 return M

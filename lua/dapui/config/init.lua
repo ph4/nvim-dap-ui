@@ -37,7 +37,7 @@ local dapui = {}
 ---@field size number Size of the layout in lines/columns
 ---@field position "left"|"right"|"top"|"bottom" Which side of editor to open
 --- layout on
----
+
 ---@class dapui.Config.layout.element
 ---@field id string Element ID
 ---@field size number Size of the element in lines/columns or as proportion of
@@ -73,6 +73,8 @@ local dapui = {}
 --- name to fill before trimming
 ---@field max_value_lines? integer Maximum number of lines to allow a value to
 --- fill before trimming
+---@field sort_variables? fun(a: dapui.types.Variable, b: dapui.types.Variable):boolean Sorting function to determine
+--- render order of variables.
 
 ---@alias dapui.Action "expand"|"open"|"remove"|"edit"|"repl"|"toggle"
 
@@ -160,11 +162,17 @@ local user_config = default_config
 local function fill_elements(area)
   area = vim.deepcopy(area)
   local filled = {}
-  vim.validate({
-    size = { area.size, "number" },
-    elements = { area.elements, "table" },
-    position = { area.position, "string" },
-  })
+  if vim.fn.has("nvim-0.11") == 1 then
+    vim.validate("size", area.size, "number")
+    vim.validate("elements", area.elements, "table")
+    vim.validate("position", area.position, "string")
+  else
+    vim.validate({
+      size = { area.size, "number" },
+      elements = { area.elements, "table" },
+      position = { area.position, "string" },
+    })
+  end
   for i, element in ipairs(area.elements) do
     if type(element) == "string" then
       filled[i] = { id = element, size = 1 / #area.elements }

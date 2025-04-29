@@ -9,12 +9,13 @@ good out of the box configuration.
 
 ## Installation
 
-Install with your favourite package manager alongside nvim-dap
+Install with your favourite package manager alongside nvim-dap and nvim-nio
 
 [**dein**](https://github.com/Shougo/dein.vim):
 
 ```vim
 call dein#add("mfussenegger/nvim-dap")
+call dein#add("nvim-neotest/nvim-nio")
 call dein#add("rcarriga/nvim-dap-ui")
 ```
 
@@ -22,14 +23,35 @@ call dein#add("rcarriga/nvim-dap-ui")
 
 ```vim
 Plug 'mfussenegger/nvim-dap'
+Plug 'nvim-neotest/nvim-nio'
 Plug 'rcarriga/nvim-dap-ui'
 ```
 
 [**packer.nvim**](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-use { "rcarriga/nvim-dap-ui", requires = {"mfussenegger/nvim-dap"} }
+use { "rcarriga/nvim-dap-ui", requires = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} }
 ```
+
+[**lazy.nvim**](https://github.com/folke/lazy.nvim)
+
+```lua
+{ "rcarriga/nvim-dap-ui", dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} }
+```
+
+It is highly recommended to use [lazydev.nvim](https://github.com/folke/lazydev.nvim) to enable type checking for nvim-dap-ui to get
+type checking, documentation and autocompletion for all API functions.
+
+```lua
+require("lazydev").setup({
+  library = { "nvim-dap-ui" },
+})
+```
+
+The default icons use [codicons](https://github.com/microsoft/vscode-codicons).
+It's recommended to use this [fork](https://github.com/ChristianChiarulli/neovim-codicons) which fixes alignment issues
+for the terminal. If your terminal doesn't support font fallback and you need to have icons included in your font, you can patch it via [Font Patcher](https://github.com/ryanoasis/nerd-fonts#option-8-patch-your-own-font). 
+There is a simple step by step guide [here](https://github.com/mortepau/codicons.nvim#how-to-patch-fonts).
 
 ## Configuration
 
@@ -41,22 +63,17 @@ There can be any number of layouts, containing whichever elements desired.
 
 Elements can also be displayed temporarily in a floating window.
 
-See `:h dapui.setup()` for configuration options and defaults
+Each element has a set of *mappings* for element-specific possible actions, detailed below for each element.
+The total set of actions/mappings and their default shortcuts are:
+- `edit`: `e`
+- `expand`: `<CR>` or left click
+- `open`: `o`
+- `remove`: `d`
+- `repl`: `r`
+- `toggle`: `t`
 
-It is highly recommended to use [neodev.nvim](https://github.com/folke/neodev.nvim) to enable type checking for nvim-dap-ui to get
-type checking, documentation and autocompletion for all API functions.
+See `:h dapui.setup()` for configuration options and defaults.
 
-```lua
-require("neodev").setup({
-  library = { plugins = { "nvim-dap-ui" }, types = true },
-  ...
-})
-```
-
-The default icons use [codicons](https://github.com/microsoft/vscode-codicons).
-It's recommended to use this [fork](https://github.com/ChristianChiarulli/neovim-codicons) which fixes alignment issues
-for the terminal. If your terminal doesn't support font fallback and you need to have icons included in your font, you can patch it via [Font Patcher](https://github.com/ryanoasis/nerd-fonts#option-8-patch-your-own-font). 
-There is a simple step by step guide [here](https://github.com/mortepau/codicons.nvim#how-to-patch-fonts).
 
 ### Variable Scopes
 
@@ -152,13 +169,16 @@ You can use nvim-dap events to open and close the windows automatically (`:help 
 
 ```lua
 local dap, dapui = require("dap"), require("dapui")
-dap.listeners.after.event_initialized["dapui_config"] = function()
+dap.listeners.before.attach.dapui_config = function()
   dapui.open()
 end
-dap.listeners.before.event_terminated["dapui_config"] = function()
+dap.listeners.before.launch.dapui_config = function()
+  dapui.open()
+end
+dap.listeners.before.event_terminated.dapui_config = function()
   dapui.close()
 end
-dap.listeners.before.event_exited["dapui_config"] = function()
+dap.listeners.before.event_exited.dapui_config = function()
   dapui.close()
 end
 ```
